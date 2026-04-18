@@ -88,5 +88,37 @@
     "slug": "agentic-ai-for-content-operations-what-marketing-leaders-need-to-know",
     "content_type": "linkedin_post",
     "timestamp": "2026-04-18T21:21:56.052469+00:00"
+  },
+  {
+    "request_topic": "agentic AI for content operations",
+    "brand_name": "FinEdge",
+    "decision": "approve",
+    "feedback": null,
+    "workflow_stage": "DRAFT_GENERATED",
+    "workflow_next_action": "HUMAN_REVIEW",
+    "final_action": "READY_FOR_PUBLISH",
+    "confidence": 0.85,
+    "approved_for_publish": true,
+    "title": "Agentic Ai For Content Operations: What Marketing Leaders Need to Know",
+    "summary": "Marketing managers at mid-size SaaS companies face constant pressure to produce engaging content efficiently. Agentic AI is transforming content operations by automating repetitive tasks, enabling tea",
+    "slug": "agentic-ai-for-content-operations-what-marketing-leaders-need-to-know",
+    "content_type": "linkedin_post",
+    "publish_payload": {
+      "title": "Agentic Ai For Content Operations: What Marketing Leaders Need to Know",
+      "body": "Marketing managers at mid-size SaaS companies face constant pressure to produce engaging content efficiently. Agentic AI is transforming content operations by automating repetitive tasks, enabling teams to focus on strategy and creativity. Data shows companies leveraging agentic AI reduce content production time by up to 40%, improving both output quality and speed.\n\nAt FinEdge, we integrate agentic AI tools that learn from your content performance, continuously optimizing workflows and delivering insights that elevate your marketing efforts. Our approach ensures your team stays agile and responsive in a competitive market without compromising quality or brand voice.\n\nThe future of content operations is intelligent automation-embrace agentic AI to streamline processes and unlock your team's full potential.",
+      "summary": "Marketing managers at mid-size SaaS companies face constant pressure to produce engaging content efficiently. Agentic AI is transforming content operations by automating repetitive tasks, enabling tea",
+      "slug": "agentic-ai-for-content-operations-what-marketing-leaders-need-to-know",
+      "tags": [
+        "#AI",
+        "#Automation",
+        "#LinkedInStrategy",
+        "#AgenticAI"
+      ],
+      "content_type": "linkedin_post",
+      "status": "draft",
+      "brand": "FinEdge",
+      "audience": "Marketing managers at mid-size SaaS companies"
+    },
+    "timestamp": "2026-04-18T21:25:32.906645+00:00"
   }
 ]
