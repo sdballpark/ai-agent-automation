@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import UTC, datetime
 from typing import List, Optional
 
@@ -34,6 +35,10 @@ class WorkflowResponse(BaseModel):
     stage: str
     ideas: List[str]
     draft: str
+    title: str
+    summary: str
+    slug: str
+    content_type: str
     hashtags: List[str]
     confidence: float
     approved_for_publish: bool
@@ -66,6 +71,22 @@ def normalize_text(text: str) -> str:
     return text
 
 
+def generate_slug(title: str) -> str:
+    slug = re.sub(r"[^a-zA-Z0-9\\s-]", "", title)
+    slug = slug.lower().strip().replace(" ", "-")
+    slug = re.sub(r"-+", "-", slug)
+    return slug
+
+
+def generate_metadata(draft: str, topic: str) -> tuple[str, str, str, str]:
+    title = f"{topic.title()}: What Marketing Leaders Need to Know"
+    first_paragraph = draft.split("\n\n")[0].strip()
+    summary = first_paragraph[:200]
+    slug = generate_slug(title)
+    content_type = "linkedin_post"
+    return title, summary, slug, content_type
+
+
 def generate_draft(request: LinkedInRequest) -> str:
     prompt = f"""
 Write a LinkedIn post.
@@ -85,34 +106,27 @@ Requirements:
     if request.feedback:
         prompt += f"""
 
-Revision feedback to apply:
+Revision feedback:
 {request.feedback}
-
-Revise the draft to address that feedback directly.
 """
 
-    api_key_present = bool(os.getenv("OPENAI_API_KEY"))
-
-    if api_key_present:
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4.1-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert LinkedIn content strategist.",
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                ],
-            )
-            return normalize_text(response.choices[0].message.content or "")
-        except Exception as e:
-            return f"LLM call failed: {str(e)}"
-
-    return "Fallback draft: no API key configured."
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert LinkedIn strategist.",
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+        )
+        return normalize_text(response.choices[0].message.content or "")
+    except Exception as e:
+        return f"LLM error: {str(e)}"
 
 
 @app.get("/")
@@ -133,15 +147,16 @@ def health():
 def linkedin_workflow(request: LinkedInRequest):
     ideas = [
         f"How {request.brand_name} is approaching {request.topic}",
-        f"Three lessons about {request.topic} for {request.audience}",
-        f"What leaders should know about {request.topic} right now",
+        f"Three lessons about {request.topic}",
+        f"What leaders should know about {request.topic}",
     ]
 
     draft = generate_draft(request)
+    title, summary, slug, content_type = generate_metadata(draft, request.topic)
 
     hashtags = ["#AI", "#Automation", "#LinkedInStrategy", "#AgenticAI"]
 
-    confidence = 0.82
+    confidence = 0.85
     approved_for_publish = confidence >= 0.80 and not request.dry_run
 
     if request.feedback:
@@ -162,6 +177,10 @@ def linkedin_workflow(request: LinkedInRequest):
         stage=stage,
         ideas=ideas,
         draft=draft,
+        title=title,
+        summary=summary,
+        slug=slug,
+        content_type=content_type,
         hashtags=hashtags,
         confidence=confidence,
         approved_for_publish=approved_for_publish,
