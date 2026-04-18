@@ -72,5 +72,21 @@
     "slug": "agenticaiforcontentoperationswhatmarketingleadersneedtoknow",
     "content_type": "linkedin_post",
     "timestamp": "2026-04-18T21:12:29.443694+00:00"
+  },
+  {
+    "request_topic": "agentic AI for content operations",
+    "brand_name": "FinEdge",
+    "decision": "approve",
+    "feedback": null,
+    "workflow_stage": "DRAFT_GENERATED",
+    "workflow_next_action": "HUMAN_REVIEW",
+    "final_action": "READY_FOR_PUBLISH",
+    "confidence": 0.85,
+    "approved_for_publish": true,
+    "title": "Agentic Ai For Content Operations: What Marketing Leaders Need to Know",
+    "summary": "Marketing managers at mid-size SaaS companies face increasing pressure to scale content operations without compromising quality or speed. Agentic AI is emerging as a game-changer by automating repetit",
+    "slug": "agentic-ai-for-content-operations-what-marketing-leaders-need-to-know",
+    "content_type": "linkedin_post",
+    "timestamp": "2026-04-18T21:21:56.052469+00:00"
   }
 ]
