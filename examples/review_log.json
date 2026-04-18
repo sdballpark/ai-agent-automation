@@ -9,5 +9,16 @@
     "confidence": 0.82,
     "approved_for_publish": true,
     "timestamp": "2026-04-18T20:39:49.081768"
+  },
+  {
+    "request_topic": "agentic AI for content operations",
+    "brand_name": "FinEdge",
+    "decision": "approve",
+    "workflow_stage": "DRAFT_GENERATED",
+    "workflow_next_action": "HUMAN_REVIEW",
+    "final_action": "READY_FOR_PUBLISH",
+    "confidence": 0.82,
+    "approved_for_publish": true,
+    "timestamp": "2026-04-18T20:42:25.554385+00:00"
   }
 ]

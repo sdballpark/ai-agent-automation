@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import requests
@@ -108,7 +108,7 @@ def main():
         "final_action": final_action,
         "confidence": data.get("confidence"),
         "approved_for_publish": decision == "approve",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     log_entries = load_review_log()
