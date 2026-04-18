@@ -24,8 +24,8 @@ def call_workflow(payload: dict) -> dict:
     return response.json()
 
 
-def display_response(data: dict) -> None:
-    print("=== Workflow Response ===")
+def display_response(data: dict, title: str = "=== Workflow Response ===") -> None:
+    print(title)
     print(f"Status: {data.get('status')}")
     print(f"Stage: {data.get('stage')}")
     print(f"Next Action: {data.get('next_action')}")
@@ -60,6 +60,15 @@ def prompt_human_review() -> str:
     return decision
 
 
+def prompt_revision_feedback() -> str:
+    print("=== Revision Feedback ===")
+    feedback = input("Enter revision feedback: ").strip()
+    while not feedback:
+        print("Feedback cannot be empty.")
+        feedback = input("Enter revision feedback: ").strip()
+    return feedback
+
+
 def determine_final_action(decision: str) -> str:
     if decision == "approve":
         return "READY_FOR_PUBLISH"
@@ -91,6 +100,22 @@ def main():
     display_response(data)
 
     decision = prompt_human_review()
+    revised_data = None
+    feedback = None
+
+    if decision == "revise":
+        feedback = prompt_revision_feedback()
+        revised_payload = dict(payload)
+        revised_payload["feedback"] = feedback
+
+        print()
+        print("=== Sending Revision Request ===")
+        print(json.dumps(revised_payload, indent=2))
+        print()
+
+        revised_data = call_workflow(revised_payload)
+        display_response(revised_data, title="=== Revised Workflow Response ===")
+
     final_action = determine_final_action(decision)
 
     print()
@@ -99,14 +124,19 @@ def main():
     print(f"Final Action: {final_action}")
     print()
 
+    final_stage = revised_data.get("stage") if revised_data else data.get("stage")
+    final_next_action = revised_data.get("next_action") if revised_data else data.get("next_action")
+    final_confidence = revised_data.get("confidence") if revised_data else data.get("confidence")
+
     review_record = {
         "request_topic": payload.get("topic"),
         "brand_name": payload.get("brand_name"),
         "decision": decision,
-        "workflow_stage": data.get("stage"),
-        "workflow_next_action": data.get("next_action"),
+        "feedback": feedback,
+        "workflow_stage": final_stage,
+        "workflow_next_action": final_next_action,
         "final_action": final_action,
-        "confidence": data.get("confidence"),
+        "confidence": final_confidence,
         "approved_for_publish": decision == "approve",
         "timestamp": datetime.now(UTC).isoformat(),
     }
