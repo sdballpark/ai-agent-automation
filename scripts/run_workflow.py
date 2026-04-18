@@ -33,6 +33,13 @@ def display_response(data: dict, title: str = "=== Workflow Response ===") -> No
     print(f"Confidence: {data.get('confidence')}")
     print()
 
+    print("=== Metadata ===")
+    print(f"Title: {data.get('title')}")
+    print(f"Summary: {data.get('summary')}")
+    print(f"Slug: {data.get('slug')}")
+    print(f"Content Type: {data.get('content_type')}")
+    print()
+
     print("=== Ideas ===")
     for idx, idea in enumerate(data.get("ideas", []), start=1):
         print(f"{idx}. {idea}")
@@ -124,20 +131,22 @@ def main():
     print(f"Final Action: {final_action}")
     print()
 
-    final_stage = revised_data.get("stage") if revised_data else data.get("stage")
-    final_next_action = revised_data.get("next_action") if revised_data else data.get("next_action")
-    final_confidence = revised_data.get("confidence") if revised_data else data.get("confidence")
+    final_data = revised_data if revised_data else data
 
     review_record = {
         "request_topic": payload.get("topic"),
         "brand_name": payload.get("brand_name"),
         "decision": decision,
         "feedback": feedback,
-        "workflow_stage": final_stage,
-        "workflow_next_action": final_next_action,
+        "workflow_stage": final_data.get("stage"),
+        "workflow_next_action": final_data.get("next_action"),
         "final_action": final_action,
-        "confidence": final_confidence,
+        "confidence": final_data.get("confidence"),
         "approved_for_publish": decision == "approve",
+        "title": final_data.get("title"),
+        "summary": final_data.get("summary"),
+        "slug": final_data.get("slug"),
+        "content_type": final_data.get("content_type"),
         "timestamp": datetime.now(UTC).isoformat(),
     }
 
