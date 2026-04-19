@@ -9,7 +9,8 @@ Purpose:
 - Display workflow output in a readable format.
 - Pause for human review (approve / revise / reject).
 - If revise is chosen, collect feedback and request a revised draft.
-- Persist review outcomes to a local review log for traceability.
+- If approve is chosen, execute a local publish action.
+- Persist review outcomes and publish outcomes to local logs.
 
 Change Log / Historical Notes:
 1. Initial version:
@@ -36,14 +37,17 @@ Change Log / Historical Notes:
    - Added publish_payload to console output and to the final review record.
    - Goal: show exactly what downstream systems would consume.
 
-Notes for maintainers:
-- This file is intentionally verbose and highly commented for clarity.
-- It is designed for local development and debugging, not silent production execution.
+7. Publish executor:
+   - Added local publish and reject execution paths.
+   - Approve now writes a structured record to publish_log.json.
+   - Reject now writes a structured record to rejection_log.json.
+   - Goal: move from "decision only" to "decision -> action".
 """
 
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, Dict, List
 
 import requests
 
@@ -54,6 +58,8 @@ import requests
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 REQUEST_FILE = PROJECT_ROOT / "examples" / "linkedin_request_sample.json"
 REVIEW_LOG = PROJECT_ROOT / "examples" / "review_log.json"
+PUBLISH_LOG = PROJECT_ROOT / "examples" / "publish_log.json"
+REJECTION_LOG = PROJECT_ROOT / "examples" / "rejection_log.json"
 WORKFLOW_URL = "http://127.0.0.1:8000/workflow/linkedin"
 
 
@@ -61,7 +67,7 @@ WORKFLOW_URL = "http://127.0.0.1:8000/workflow/linkedin"
 # File / API Helpers
 # ---------------------------------------------------------------------------
 
-def load_payload() -> dict:
+def load_payload() -> Dict[str, Any]:
     """
     Load the sample request payload from disk.
 
@@ -76,7 +82,7 @@ def load_payload() -> dict:
         return json.load(f)
 
 
-def call_workflow(payload: dict) -> dict:
+def call_workflow(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
     Send the payload to the workflow endpoint and return parsed JSON.
 
@@ -93,7 +99,7 @@ def call_workflow(payload: dict) -> dict:
 # Display Helpers
 # ---------------------------------------------------------------------------
 
-def display_response(data: dict, title: str = "=== Workflow Response ===") -> None:
+def display_response(data: Dict[str, Any], title: str = "=== Workflow Response ===") -> None:
     """
     Print a readable workflow response to the terminal.
 
@@ -184,25 +190,96 @@ def determine_final_action(decision: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Review Log Helpers
+# JSON Log Helpers
 # ---------------------------------------------------------------------------
 
-def load_review_log() -> list:
+def load_json_log(path: Path) -> List[Dict[str, Any]]:
     """
-    Load the existing review log if present.
+    Load a JSON log file if it exists. Otherwise return an empty list.
+
+    Why this exists:
+    - Keeps log loading logic centralized.
+    - Makes review, publish, and rejection logs consistent.
     """
-    if REVIEW_LOG.exists():
-        with open(REVIEW_LOG, "r", encoding="utf-8") as f:
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return []
 
 
-def save_review_log(entries: list) -> None:
+def save_json_log(path: Path, entries: List[Dict[str, Any]]) -> None:
     """
-    Persist the updated review log to disk.
+    Save a JSON log file to disk.
+
+    Why this exists:
+    - Keeps log saving logic centralized.
+    - Makes all local audit artifacts use the same format.
     """
-    with open(REVIEW_LOG, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(entries, f, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Execution Helpers
+# ---------------------------------------------------------------------------
+
+def execute_publish(final_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Simulate a publish action by writing a structured publish record.
+
+    Why this exists:
+    - This is the first real execution layer after human approval.
+    - Today it writes to a local file.
+    - Later this same function could call n8n, a CMS, Slack, ServiceNow, or LinkedIn.
+    """
+    publish_payload = final_data.get("publish_payload", {})
+
+    publish_record = {
+        "execution_type": "LOCAL_PUBLISH_SIMULATION",
+        "status": "published",
+        "published_at": datetime.now(UTC).isoformat(),
+        "title": publish_payload.get("title"),
+        "slug": publish_payload.get("slug"),
+        "content_type": publish_payload.get("content_type"),
+        "brand": publish_payload.get("brand"),
+        "audience": publish_payload.get("audience"),
+        "summary": publish_payload.get("summary"),
+        "tags": publish_payload.get("tags"),
+        "body": publish_payload.get("body"),
+    }
+
+    log_entries = load_json_log(PUBLISH_LOG)
+    log_entries.append(publish_record)
+    save_json_log(PUBLISH_LOG, log_entries)
+
+    return publish_record
+
+
+def execute_rejection(final_data: Dict[str, Any], decision: str) -> Dict[str, Any]:
+    """
+    Record a rejection event to a local rejection log.
+
+    Why this exists:
+    - Rejections are decisions too and should be auditable.
+    - Makes the workflow symmetrical: approve and reject both do something real.
+    """
+    rejection_record = {
+        "execution_type": "LOCAL_REJECTION_LOG",
+        "status": "rejected",
+        "decision": decision,
+        "recorded_at": datetime.now(UTC).isoformat(),
+        "title": final_data.get("title"),
+        "slug": final_data.get("slug"),
+        "content_type": final_data.get("content_type"),
+        "brand_name": final_data.get("publish_payload", {}).get("brand"),
+        "audience": final_data.get("publish_payload", {}).get("audience"),
+    }
+
+    log_entries = load_json_log(REJECTION_LOG)
+    log_entries.append(rejection_record)
+    save_json_log(REJECTION_LOG, log_entries)
+
+    return rejection_record
 
 
 # ---------------------------------------------------------------------------
@@ -219,8 +296,10 @@ def main():
     3. Display response
     4. Ask for human decision
     5. If revise, collect feedback and send revised request
-    6. Build review record
-    7. Persist review record to local log
+    6. Determine final action
+    7. Execute publish or rejection if needed
+    8. Build review record
+    9. Persist review record to local log
     """
     payload = load_payload()
 
@@ -259,6 +338,30 @@ def main():
     # Use revised response if it exists; otherwise use the original response.
     final_data = revised_data if revised_data else data
 
+    # Execute the real next step based on decision.
+    execution_record = None
+
+    if decision == "approve":
+        execution_record = execute_publish(final_data)
+        print("=== Publish Executor Result ===")
+        print(json.dumps(execution_record, indent=2))
+        print()
+        print(f"Publish log updated: {PUBLISH_LOG}")
+        print()
+
+    elif decision == "reject":
+        execution_record = execute_rejection(final_data, decision)
+        print("=== Rejection Executor Result ===")
+        print(json.dumps(execution_record, indent=2))
+        print()
+        print(f"Rejection log updated: {REJECTION_LOG}")
+        print()
+
+    else:
+        print("=== Revision Path Selected ===")
+        print("No publish action executed. Content remains in revision flow.")
+        print()
+
     review_record = {
         "request_topic": payload.get("topic"),
         "brand_name": payload.get("brand_name"),
@@ -274,12 +377,13 @@ def main():
         "slug": final_data.get("slug"),
         "content_type": final_data.get("content_type"),
         "publish_payload": final_data.get("publish_payload"),
+        "execution_record": execution_record,
         "timestamp": datetime.now(UTC).isoformat(),
     }
 
-    log_entries = load_review_log()
+    log_entries = load_json_log(REVIEW_LOG)
     log_entries.append(review_record)
-    save_review_log(log_entries)
+    save_json_log(REVIEW_LOG, log_entries)
 
     print("=== Final Review Record ===")
     print(json.dumps(review_record, indent=2))
